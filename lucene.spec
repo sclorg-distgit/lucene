@@ -35,7 +35,11 @@
 Summary:        High-performance, full-featured text search engine
 Name:           %{?scl_prefix}lucene
 Version:        3.6.2
-Release:        8%{?dist}
+# Release should be higher than el7 builds. Use convention
+# 60.X where X is an increasing int. 60 for rhel-6. We use
+# 70.X for rhel-7. For some reason we cannot rely on the
+# dist tag.
+Release:        60.1%{?dist}
 Epoch:          0
 License:        ASL 2.0
 URL:            http://lucene.apache.org/
@@ -44,37 +48,24 @@ Source0:        http://www.apache.org/dist/lucene/java/%{version}/%{pkg_name}-%{
 Source1:        lucene-%{version}-core-OSGi-MANIFEST.MF
 Source2:        lucene-%{version}-analysis-OSGi-MANIFEST.MF
 Source3:        ivy-conf.xml
-# DictionaryBasedBreakIterator was moved into the base RuleBasedBreakIterator
-# in icu4j. v49 => v50
-Patch0:         lucene_contrib_icu4j_v50.patch
 #svn export http://svn.apache.org/repos/asf/lucene/dev/tags/lucene_solr_3_6_2/dev-tools@r1450168
 #tar caf dev-tools.tar.xz dev-tools/
 Source4:        dev-tools.tar.xz
-BuildRequires:  jpackage-utils >= 0:1.6
-BuildRequires:  ant >= 0:1.6
-BuildRequires:  ant-junit >= 0:1.6
-BuildRequires:  junit
-BuildRequires:  javacc
-BuildRequires:  java-javadoc
-BuildRequires:  jtidy
-BuildRequires:  regexp
-BuildRequires:  apache-commons-digester
+BuildRequires:  maven30-ant >= 0:1.6
+BuildRequires:  maven30-ant-junit >= 0:1.6
+BuildRequires:  maven30-junit
+BuildRequires:  maven30-javacc
+BuildRequires:  maven30-jtidy
+BuildRequires:  maven30-regexp
+BuildRequires:  maven30-apache-commons-digester
 BuildRequires:  unzip
 BuildRequires:  zip
-BuildRequires:  java-devel >= 1:1.6.0
-BuildRequires:  apache-commons-compress
-BuildRequires:  apache-ivy
+BuildRequires:  maven30-apache-commons-compress
+BuildRequires:  maven30-apache-ivy
 # for tests
 BuildRequires:  subversion
-# BR for lucene-contrib
-%if 0%{?fedora}
-BuildRequires:  icu4j
-%endif
 
 BuildArch:      noarch
-
-Requires:       jpackage-utils
-
 %{?scl:Requires: %scl_runtime}
 
 %description
@@ -86,20 +77,9 @@ cross-platform.
 %package javadoc
 Summary:        Javadoc for %{name}
 Group:          Documentation
-Requires:       jpackage-utils
 
 %description javadoc
 %{summary}.
-
-%if 0%{?fedora}
-%package contrib
-Summary:        %{name} contributed extensions
-Group:          Development/Libraries
-Requires:       %{name} = %{epoch}:%{version}-%{release}
-
-%description contrib
-%{summary}.
-%endif
 
 %prep
 %setup -q -n %{pkg_name}-%{version}
@@ -124,10 +104,8 @@ sed -i -e "s|ant-junit|ant/ant-junit|g" test-framework/ivy.xml
 sed -i -e "s|xercesImpl|xerces-j2|g" contrib/benchmark/ivy.xml
 sed -i -e "s|jakarta-regexp|regexp|g" contrib/queries/ivy.xml
 
-# ICU4J v50 compatibility
-%patch0 -p2
-
 %build
+%{?scl:scl enable maven30 %{scl} - << "EOF"}
 mkdir -p docs
 mkdir -p lib
 export OPT_JAR_LIST="ant/ant-junit junit"
@@ -144,37 +122,16 @@ ant -Divy.settings.file=ivy-conf.xml -Dbuild.sysclasspath=first \
   -Dmaven-tasks.uptodate=true \
   jar-lucene-core docs javadocs-core
 
-%if 0%{?fedora}
-export CLASSPATH=$(build-classpath jtidy regexp commons-digester apache-commons-compress icu4j ivy)
-ant -Divy.settings.file=ivy-conf.xml -Dbuild.sysclasspath=first \
-  -Djavacc.home=%{_bindir}/javacc \
-  -Djavacc.jar=%{_javadir}/javacc.jar \
-  -Djavacc.jar.dir=%{_javadir} \
-  -Djavadoc.link=file://%{_javadocdir}/java \
-  -Dversion=%{version} \
-  -Dfailonjavadocwarning=false \
-  -Dmaven-tasks.uptodate=true \
-  jar-test-framework javadocs build-contrib
-%endif
-    
 # add missing OSGi metadata to manifests
 mkdir META-INF
 unzip -o build/core/lucene-core-%{version}.jar META-INF/MANIFEST.MF
 cp %{SOURCE1} META-INF/MANIFEST.MF
 sed -i '/^\r$/d' META-INF/MANIFEST.MF
 zip -u build/core/lucene-core-%{version}.jar META-INF/MANIFEST.MF
-
-%if 0%{?fedora}
-unzip -o build/contrib/analyzers/common/lucene-analyzers-%{version}.jar META-INF/MANIFEST.MF
-cp %{SOURCE2} META-INF/MANIFEST.MF
-sed -i '/^\r$/d' META-INF/MANIFEST.MF
-zip -u build/contrib/analyzers/common/lucene-analyzers-%{version}.jar META-INF/MANIFEST.MF
-
-mv build/contrib/analyzers/common build/contrib/analyzers/analyzers
-mv dev-tools/maven/lucene/contrib/analyzers/common dev-tools/maven/lucene/contrib/analyzers/analyzers
-%endif
+%{?scl:EOF}
 
 %install
+%{?scl:scl enable maven30 %{scl} - << "EOF"}
 
 # jars
 install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}
@@ -193,45 +150,16 @@ install -m 0644 dev-tools/maven/pom.xml.template \
        $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP-lucene-solr-grandparent.pom
 %add_maven_depmap JPP-lucene-solr-grandparent.pom
 
-%if 0%{?fedora}
-# contrib jars
-install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib
-for c in benchmark demo facet grouping highlighter \
-         icu instantiated join memory misc pruning queries queryparser remote \
-         spatial spellchecker xml-query-parser; do
-    install -m 0644 build/contrib/$c/%{name}-${c}-%{version}.jar \
-        $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib/%{name}-${c}.jar
-
-    install -m 0644 dev-tools/maven/lucene/contrib/$c/pom.xml.template \
-               $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP.lucene-contrib-lucene-$c.pom
-    %add_maven_depmap JPP.lucene-contrib-lucene-$c.pom %{name}-contrib/%{name}-${c}.jar
-done
-
-# contrib analyzers
-for c in analyzers kuromoji phonetic smartcn stempel; do
-    install -m 0644 build/contrib/analyzers/$c/%{name}-${c}-%{version}.jar \
-        $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib/%{name}-${c}.jar
-
-    install -m 0644 dev-tools/maven/lucene/contrib/analyzers/$c/pom.xml.template \
-               $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP.lucene-contrib-lucene-$c.pom
-    %add_maven_depmap JPP.lucene-contrib-lucene-$c.pom %{name}-contrib/%{name}-${c}.jar
-done
-
-# contrib pom
-install -m 0644 dev-tools/maven/lucene/contrib/pom.xml.template \
-       $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP-lucene-contrib.pom
-%add_maven_depmap JPP-lucene-contrib.pom
-%endif
-
 # javadoc
 install -d -m 0755 $RPM_BUILD_ROOT%{_javadocdir}/%{pkg_name}
 cp -pr build/docs/api/* \
   $RPM_BUILD_ROOT%{_javadocdir}/%{pkg_name}
+%{?scl:EOF}
 
 %files
 %doc CHANGES.txt LICENSE.txt README.txt NOTICE.txt
 %{_mavenpomdir}/JPP*pom
-%{_mavendepmapfragdir}/%{name}
+%{_mavendepmapfragdir}/%{pkg_name}
 %{_javadir}/%{pkg_name}.jar
 %{_javadir}/%{pkg_name}-core.jar
 
@@ -239,13 +167,11 @@ cp -pr build/docs/api/* \
 %doc LICENSE.txt
 %{_javadocdir}/%{pkg_name}
 
-%if 0%{?fedora}
-%files contrib
-%{_javadir}/%{name}-contrib
-%doc contrib/CHANGES.txt
-%endif
-
 %changelog
+* Fri Jun 20 2014 Severin Gehwolf <sgehwolf@redhat.com> - 0:3.6.2-60.1
+- Build using the maven30 collection.
+- Remove Fedora conditionals.
+
 * Mon Jan 20 2014 Severin Gehwolf <sgehwolf@redhat.com> - 0:3.6.2-8
 - Rebuild in order to fix osgi()-style provides.
 - Resolves: RHBZ#1054813
