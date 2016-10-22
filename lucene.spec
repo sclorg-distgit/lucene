@@ -39,11 +39,7 @@
 Summary:        High-performance, full-featured text search engine
 Name:           %{?scl_prefix}lucene
 Version:        3.6.2
-# Release should be higher than el6 builds. Use convention
-# 60.X where X is an increasing int. 60 for rhel-6. We use
-# 70.X for rhel-7. For some reason we cannot rely on the
-# dist tag.
-Release:        70.1%{?dist}
+Release:        7%{?dist}
 Epoch:          0
 License:        ASL 2.0
 URL:            http://lucene.apache.org/
@@ -81,6 +77,8 @@ BuildRequires:  icu4j
 
 BuildArch:      noarch
 
+Requires:       jpackage-utils
+
 %{?scl:Requires: %scl_runtime}
 
 %description
@@ -92,7 +90,7 @@ cross-platform.
 %package javadoc
 Summary:        Javadoc for %{name}
 Group:          Documentation
-%{?scl:Requires: %scl_runtime}
+Requires:       jpackage-utils
 
 %description javadoc
 %{summary}.
@@ -237,7 +235,7 @@ cp -pr build/docs/api/* \
 %files
 %doc CHANGES.txt LICENSE.txt README.txt NOTICE.txt
 %{_mavenpomdir}/JPP*pom
-%{_mavendepmapfragdir}/%{pkg_name}
+%{_mavendepmapfragdir}/%{name}
 %{_javadir}/%{pkg_name}.jar
 %{_javadir}/%{pkg_name}-core.jar
 
@@ -252,9 +250,6 @@ cp -pr build/docs/api/* \
 %endif
 
 %changelog
-* Mon Jun 23 2014 Severin Gehwolf <sgehwolf@redhat.com> 1.0.18-70.1
-- Add requires for thermostat1-runtime package.
-
 * Fri Dec 20 2013 Severin Gehwolf <sgehwolf@redhat.com> 0:3.6.2-7
 - Don't generate osgi() style provides.
 - Fix bogus changelog.
