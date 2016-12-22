@@ -35,7 +35,7 @@
 Summary:        High-performance, full-featured text search engine
 Name:           %{?scl_prefix}%{pkg_name}
 Version:        4.8.0
-Release:        6.7%{?dist}
+Release:        6.8%{?dist}
 Epoch:          0
 License:        ASL 2.0
 URL:            http://lucene.apache.org/
@@ -367,6 +367,10 @@ set -e -x
 %doc LICENSE.txt
 
 %changelog
+* Wed Nov 16 2016 Mat Booth <mat.booth@redhat.com> - 0:4.8.0-6.8
+- Be more strict with versions in require-bundle directives
+- Resolves: rhbz#1395709
+
 * Thu Jan 15 2015 Michael Simacek <msimacek@redhat.com> - 0:4.8.0-6.7
 - Fix unowned directory
 

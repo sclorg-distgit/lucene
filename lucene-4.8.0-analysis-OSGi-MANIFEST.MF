@@ -1,7 +1,7 @@
 Bundle-Localization: plugin
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-SymbolicName: org.apache.lucene.analysis
-Require-Bundle: org.apache.lucene.core;bundle-version="4.8.0"
+Require-Bundle: org.apache.lucene.core;bundle-version="[4.8.0,5.0.0)"
 Export-Package: org.apache.lucene.analysis.ar;version="4.8.0",
  org.apache.lucene.analysis.core;version="4.8.0",
  org.apache.lucene.analysis.bg;version="4.8.0",
